@@ -29,6 +29,7 @@ class DubbingApp {
         this.videoQualitySelect = document.getElementById('videoQuality');
         this.audioQualitySelect = document.getElementById('audioQuality');
         this.exportFormatSelect = document.getElementById('exportFormat');
+        this.videoDurationSelect = document.getElementById('videoDuration');
         this.preserveOriginalCheckbox = document.getElementById('preserveOriginal');
         this.autoRetryCheckbox = document.getElementById('autoRetry');
 
@@ -236,14 +237,17 @@ class DubbingApp {
             // Get user settings
             const options = this.getUserSettings();
             
+            // Show duration-aware messages
+            const durationText = this.getDurationDescription(options.video_duration);
+            
             // Submit video for processing
-            this.updateStatus('Submitting video for processing...', 10);
+            this.updateStatus(`Submitting video for processing (${durationText})...`, 10);
             
             const response = await this.api.submitVideo(youtubeUrl, targetLanguage, options);
             this.currentSessionId = response.session_id;
             
             // Start polling for status
-            this.updateStatus('Processing video...', 20);
+            this.updateStatus(`Processing ${durationText}...`, 20);
             
             await this.api.pollForCompletion(
                 this.currentSessionId,
@@ -257,6 +261,17 @@ class DubbingApp {
             this.isProcessing = false;
             this.setProcessingState(false);
         }
+    }
+
+    getDurationDescription(duration) {
+        const durationMap = {
+            '30': '30 second preview',
+            '60': '1 minute clip',
+            '120': '2 minute clip',
+            '300': '5 minute clip',
+            'full': 'full video'
+        };
+        return durationMap[duration] || 'video';
     }
 
     handleStatusUpdate(status) {
@@ -724,7 +739,7 @@ class DubbingApp {
 
     bindSettingsChangeEvents() {
         // Save settings when changed
-        [this.videoQualitySelect, this.audioQualitySelect, this.exportFormatSelect, 
+        [this.videoQualitySelect, this.audioQualitySelect, this.exportFormatSelect, this.videoDurationSelect,
          this.preserveOriginalCheckbox, this.autoRetryCheckbox].forEach(element => {
             element.addEventListener('change', () => this.saveUserPreferences());
         });
@@ -735,6 +750,7 @@ class DubbingApp {
             video_quality: this.videoQualitySelect.value,
             audio_quality: this.audioQualitySelect.value,
             export_format: this.exportFormatSelect.value,
+            video_duration: this.videoDurationSelect.value,
             preserve_original: this.preserveOriginalCheckbox.checked,
             auto_retry: this.autoRetryCheckbox.checked
         };
@@ -801,6 +817,7 @@ class DubbingApp {
                 if (preferences.videoQuality) this.videoQualitySelect.value = preferences.videoQuality;
                 if (preferences.audioQuality) this.audioQualitySelect.value = preferences.audioQuality;
                 if (preferences.exportFormat) this.exportFormatSelect.value = preferences.exportFormat;
+                if (preferences.videoDuration) this.videoDurationSelect.value = preferences.videoDuration;
                 if (preferences.preserveOriginal !== undefined) this.preserveOriginalCheckbox.checked = preferences.preserveOriginal;
                 if (preferences.autoRetry !== undefined) {
                     this.autoRetryCheckbox.checked = preferences.autoRetry;
@@ -817,6 +834,7 @@ class DubbingApp {
             videoQuality: this.videoQualitySelect.value,
             audioQuality: this.audioQualitySelect.value,
             exportFormat: this.exportFormatSelect.value,
+            videoDuration: this.videoDurationSelect.value,
             preserveOriginal: this.preserveOriginalCheckbox.checked,
             autoRetry: this.autoRetryCheckbox.checked
         };

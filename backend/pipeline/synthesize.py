@@ -39,8 +39,10 @@ class SynthesizeStage(PipelineStage):
                 session_dir = f"outputs/sessions/{session_info['session_id']}"
                 os.makedirs(session_dir, exist_ok=True)
                 output_path = os.path.join(session_dir, "dubbed_audio.mp3")
+                self.logger.info(f"Using session directory: {session_dir}")
             else:
-                # Fallback for standalone testing
+                # Fallback for standalone testing - but log this as it shouldn't happen in normal pipeline
+                self.logger.warning(f"No session_info provided, using fallback directory. session_info: {session_info}")
                 os.makedirs("outputs", exist_ok=True)
                 output_path = f"outputs/synthesized_{int(time.time())}.mp3"
             
@@ -103,6 +105,7 @@ class SynthesizeStage(PipelineStage):
         # Language to voice ID mapping - using actual ElevenLabs voice IDs
         # These are voices that work well with eleven_multilingual_v2 model
         language_voice_map = {
+            'english': '21m00Tcm4TlvDq8ikWAM',    # Rachel - clear female voice, excellent for English
             'spanish': '21m00Tcm4TlvDq8ikWAM',    # Rachel - clear female voice
             'french': 'EXAVITQu4vr4xnSDxMaL',     # Sarah - female voice
             'german': 'FGY2WhTYpPnrIDTdsKH5',     # Laura - female voice
@@ -132,6 +135,7 @@ class SynthesizeStage(PipelineStage):
         
         # Try common language code mappings
         language_code_map = {
+            'en': 'english',
             'es': 'spanish',
             'fr': 'french', 
             'de': 'german',

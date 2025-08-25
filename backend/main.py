@@ -35,6 +35,12 @@ active_sessions: Dict[str, Dict[str, Any]] = {}
 class VideoRequest(BaseModel):
     youtube_url: str
     target_language: str = "spanish"
+    video_quality: Optional[str] = "best"
+    audio_quality: Optional[str] = "high"
+    export_format: Optional[str] = "mp4"
+    video_duration: Optional[str] = "full"
+    preserve_original: Optional[bool] = True
+    auto_retry: Optional[bool] = True
 
 
 class VideoResponse(BaseModel):
@@ -75,7 +81,7 @@ async def health_check():
     return {"status": "healthy", "service": "DubADubDub"}
 
 
-async def process_video_background(session_id: str, youtube_url: str, target_language: str):
+async def process_video_background(session_id: str, youtube_url: str, target_language: str, video_duration: str = "full"):
     """Background task to process video with stage-by-stage status updates"""
     try:
         logger.info(f"Background processing started for session {session_id}")
@@ -89,7 +95,7 @@ async def process_video_background(session_id: str, youtube_url: str, target_lan
         })
         
         logger.info(f"Session {session_id}: Starting download stage")
-        download_result = await pipeline.download_stage.process(youtube_url)
+        download_result = await pipeline.download_stage.process(youtube_url, video_duration, session_id)
         results['download'] = download_result
         
         # Stage 2: Transcribe
@@ -120,7 +126,7 @@ async def process_video_background(session_id: str, youtube_url: str, target_lan
         })
         
         logger.info(f"Session {session_id}: Starting synthesize stage")
-        synthesize_result = await pipeline.synthesize_stage.process(translate_result)
+        synthesize_result = await pipeline.synthesize_stage.process(translate_result, download_result)
         results['synthesize'] = synthesize_result
         
         # Stage 5: Overlay
@@ -191,7 +197,8 @@ async def process_video(request: VideoRequest, background_tasks: BackgroundTasks
             process_video_background, 
             session_id, 
             request.youtube_url, 
-            request.target_language
+            request.target_language,
+            request.video_duration
         )
         
         response = VideoResponse(
@@ -326,7 +333,9 @@ async def test_synthesize(request: Dict[str, Any]):
         if not translation_data:
             raise HTTPException(status_code=400, detail="translation_data required")
         
-        result = await pipeline.synthesize_stage.process(translation_data)
+        # Create mock session info for test endpoint
+        session_info = {"session_id": f"test_{int(time.time())}"}
+        result = await pipeline.synthesize_stage.process(translation_data, session_info)
         return {"status": "success", "result": result}
         
     except Exception as e:
@@ -355,11 +364,14 @@ async def process_audio_only(request: VideoRequest):
     try:
         logger.info(f"Processing audio-only request: {request.youtube_url} -> {request.target_language}")
         
+        # Generate session ID for audio-only processing
+        session_id = str(uuid.uuid4())
+        
         # Run the audio-only pipeline
-        results = await pipeline.process_audio_only(request.youtube_url, request.target_language)
+        results = await pipeline.process_audio_only(request.youtube_url, request.target_language, request.video_duration, session_id)
         
         response = VideoResponse(
-            session_id=results['download']['session_id'],
+            session_id=session_id,
             status="completed",
             results=results
         )

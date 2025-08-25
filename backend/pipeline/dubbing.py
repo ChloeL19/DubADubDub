@@ -18,14 +18,14 @@ class DubbingPipeline:
         self.synthesize_stage = SynthesizeStage()
         self.overlay_stage = OverlayStage()
     
-    async def process_audio_only(self, youtube_url: str, target_language: str) -> Dict[str, Any]:
+    async def process_audio_only(self, youtube_url: str, target_language: str, video_duration: str = "full", session_id: str = None) -> Dict[str, Any]:
         """Process video through audio dubbing pipeline (no video overlay)"""
         results = {}
         
         try:
             # Stage 1: Download
-            self.logger.info(f"Processing audio dubbing: {youtube_url} -> {target_language}")
-            download_result = await self.download_stage.process(youtube_url)
+            self.logger.info(f"Processing audio dubbing: {youtube_url} -> {target_language} (duration: {video_duration})")
+            download_result = await self.download_stage.process(youtube_url, video_duration, session_id)
             results['download'] = download_result
             
             # Stage 2: Transcribe
@@ -50,14 +50,14 @@ class DubbingPipeline:
             self.logger.error(f"Audio dubbing pipeline failed: {str(e)}")
             raise
     
-    async def process_video(self, youtube_url: str, target_language: str) -> Dict[str, Any]:
+    async def process_video(self, youtube_url: str, target_language: str, video_duration: str = "full", session_id: str = None) -> Dict[str, Any]:
         """Process video through complete video dubbing pipeline with overlay"""
         results = {}
         
         try:
             # Stage 1: Download
-            self.logger.info(f"Processing video: {youtube_url} -> {target_language}")
-            download_result = await self.download_stage.process(youtube_url)
+            self.logger.info(f"Processing video: {youtube_url} -> {target_language} (duration: {video_duration})")
+            download_result = await self.download_stage.process(youtube_url, video_duration, session_id)
             results['download'] = download_result
             
             # Stage 2: Transcribe

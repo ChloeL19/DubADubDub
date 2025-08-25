@@ -72,16 +72,6 @@ class TranslateStage(PipelineStage):
     
     def _create_translation_prompt(self, text: str, target_language: str, source_language: str) -> str:
         """Create optimized translation prompt for Claude"""
-        return f"""Please translate the following text from {source_language} to {target_language}.
+        return f"""Translate this {source_language} text to {target_language}. Preserve the natural speaking style and conversational tone. Keep the translation length similar to the original. Return only the translated text with no additional commentary.
 
-IMPORTANT INSTRUCTIONS:
-- Preserve the natural speaking style and conversational tone
-- Maintain the same emotional tone and pacing as the original
-- Keep the translation length similar to the original for timing purposes
-- Ensure the translation sounds natural when spoken aloud
-- If there are proper nouns, keep them as they are unless they have standard translations
-
-Original text:
-{text}
-
-Provide ONLY the translation, with no additional commentary or explanation."""
+{text}"""
