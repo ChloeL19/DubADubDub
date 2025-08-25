@@ -113,6 +113,39 @@ async def test_transcribe(request: Dict[str, str]):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/test-translate")
+async def test_translate(request: Dict[str, Any]):
+    """Test endpoint for translation functionality"""
+    try:
+        transcription_data = request.get("transcription_data")
+        target_language = request.get("target_language", "spanish")
+        
+        if not transcription_data:
+            raise HTTPException(status_code=400, detail="transcription_data required")
+        
+        result = await pipeline.translate_stage.process(transcription_data, target_language)
+        return {"status": "success", "result": result}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/test-synthesize")
+async def test_synthesize(request: Dict[str, Any]):
+    """Test endpoint for synthesis functionality"""
+    try:
+        translation_data = request.get("translation_data")
+        
+        if not translation_data:
+            raise HTTPException(status_code=400, detail="translation_data required")
+        
+        result = await pipeline.synthesize_stage.process(translation_data)
+        return {"status": "success", "result": result}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
