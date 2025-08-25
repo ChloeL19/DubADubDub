@@ -48,11 +48,11 @@ async def health_check():
 
 @app.post("/process-video", response_model=VideoResponse)
 async def process_video(request: VideoRequest):
-    """Process a YouTube video through the dubbing pipeline"""
+    """Process a YouTube video through the complete dubbing pipeline with video overlay"""
     try:
-        logger.info(f"Processing video request: {request.youtube_url} -> {request.target_language}")
+        logger.info(f"Processing complete video request: {request.youtube_url} -> {request.target_language}")
         
-        # Run the pipeline
+        # Run the complete pipeline with video overlay
         results = await pipeline.process_video(request.youtube_url, request.target_language)
         
         response = VideoResponse(
@@ -144,6 +144,58 @@ async def test_synthesize(request: Dict[str, Any]):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/test-overlay")
+async def test_overlay(request: Dict[str, Any]):
+    """Test endpoint for overlay functionality"""
+    try:
+        assembly_data = request.get("assembly_data")
+        
+        if not assembly_data:
+            raise HTTPException(status_code=400, detail="assembly_data required (video_path, dubbed_audio_path, session_id)")
+        
+        result = await pipeline.overlay_stage.process(assembly_data)
+        return {"status": "success", "result": result}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/process-audio-only", response_model=VideoResponse)
+async def process_audio_only(request: VideoRequest):
+    """Process a YouTube video through the audio dubbing pipeline only (no video overlay)"""
+    try:
+        logger.info(f"Processing audio-only request: {request.youtube_url} -> {request.target_language}")
+        
+        # Run the audio-only pipeline
+        results = await pipeline.process_audio_only(request.youtube_url, request.target_language)
+        
+        response = VideoResponse(
+            session_id=results['download']['session_id'],
+            status="completed",
+            results=results
+        )
+        
+        return response
+        
+    except PipelineError as e:
+        logger.error(f"Pipeline error: {str(e)}")
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error_type": e.error_type,
+                "stage": e.stage,
+                "message": e.message,
+                "retry_possible": e.retry_possible
+            }
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "Internal server error", "message": str(e)}
+        )
 
 
 if __name__ == "__main__":
