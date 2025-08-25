@@ -1,0 +1,19 @@
+# backend/requirements.txt - Minimal version to avoid disk space issues
+
+# Web Server
+fastapi
+uvicorn
+
+# API Key Management
+python-dotenv
+
+# Core Pipeline Tools (start with these essentials)
+yt-dlp
+elevenlabs
+anthropic
+
+# Testing
+pytest
+pytest-asyncio
+
+# Note: All TTS handled via ElevenLabs API - no additional heavy dependencies needed
