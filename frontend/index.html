@@ -104,50 +104,9 @@
                     </div>
                 </div>
 
-                <!-- Batch Processing Section -->
-                <div class="batch-processing">
-                    <button type="button" id="toggleBatch" class="toggle-batch-btn">
-                        📋 Batch Processing <span class="toggle-arrow">▼</span>
-                    </button>
-                    <div id="batchPanel" class="batch-panel" style="display: none;">
-                        <div class="batch-input">
-                            <label for="batchUrls">Multiple URLs (one per line):</label>
-                            <textarea 
-                                id="batchUrls" 
-                                name="batchUrls" 
-                                placeholder="https://www.youtube.com/watch?v=video1&#10;https://www.youtube.com/watch?v=video2&#10;https://youtu.be/video3"
-                                rows="4"
-                            ></textarea>
-                            <div class="batch-actions">
-                                <button type="button" id="addCurrentUrl" class="add-current-btn">
-                                    Add Current URL
-                                </button>
-                                <button type="button" id="clearBatch" class="clear-batch-btn">
-                                    Clear All
-                                </button>
-                            </div>
-                        </div>
-                        <div class="batch-status">
-                            <div id="batchProgress" class="batch-progress" style="display: none;">
-                                <div class="batch-progress-text">Processing batch: <span id="batchCurrentIndex">0</span> of <span id="batchTotal">0</span></div>
-                                <div class="batch-progress-bar">
-                                    <div id="batchProgressFill" class="batch-progress-fill"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="submit-section">
-                    <button type="submit" id="submitBtn" class="submit-btn">
-                        <span id="submitText">Start Dubbing</span>
-                        <span id="submitIcon">🎬</span>
-                    </button>
-                    <button type="button" id="batchSubmitBtn" class="batch-submit-btn" style="display: none;">
-                        <span id="batchSubmitText">Start Batch Processing</span>
-                        <span id="batchSubmitIcon">📋</span>
-                    </button>
-                </div>
+                <button type="submit" id="submitBtn" class="submit-btn">
+                    Start Dubbing
+                </button>
             </form>
 
             <div id="statusSection" class="status-section" style="display: none;">

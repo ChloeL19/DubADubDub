@@ -5,9 +5,7 @@ class DubbingApp {
         this.api = new DubbingAPI();
         this.currentSessionId = null;
         this.isProcessing = false;
-        this.isBatchMode = false;
         this.currentYouTubeUrl = null;
-        this.batchResults = [];
         
         this.initializeElements();
         this.bindEvents();
@@ -34,18 +32,6 @@ class DubbingApp {
         this.preserveOriginalCheckbox = document.getElementById('preserveOriginal');
         this.autoRetryCheckbox = document.getElementById('autoRetry');
 
-        // Batch processing elements
-        this.toggleBatchBtn = document.getElementById('toggleBatch');
-        this.batchPanel = document.getElementById('batchPanel');
-        this.batchArrow = this.toggleBatchBtn.querySelector('.toggle-arrow');
-        this.batchUrls = document.getElementById('batchUrls');
-        this.addCurrentUrlBtn = document.getElementById('addCurrentUrl');
-        this.clearBatchBtn = document.getElementById('clearBatch');
-        this.batchSubmitBtn = document.getElementById('batchSubmitBtn');
-        this.batchProgress = document.getElementById('batchProgress');
-        this.batchCurrentIndex = document.getElementById('batchCurrentIndex');
-        this.batchTotal = document.getElementById('batchTotal');
-        this.batchProgressFill = document.getElementById('batchProgressFill');
 
         // Status elements
         this.statusSection = document.getElementById('statusSection');
@@ -125,12 +111,6 @@ class DubbingApp {
         this.toggleSettingsBtn.addEventListener('click', () => this.toggleSettings());
         this.autoRetryCheckbox.addEventListener('change', () => this.updateAutoRetryPreference());
 
-        // Batch processing events
-        this.toggleBatchBtn.addEventListener('click', () => this.toggleBatchMode());
-        this.batchUrls.addEventListener('input', () => this.updateBatchSubmitVisibility());
-        this.addCurrentUrlBtn.addEventListener('click', () => this.addCurrentUrlToBatch());
-        this.clearBatchBtn.addEventListener('click', () => this.clearBatch());
-        this.batchSubmitBtn.addEventListener('click', () => this.handleBatchSubmit());
 
         // Comparison view events
         this.previewTab.addEventListener('click', () => this.switchToPreviewView());
@@ -765,124 +745,6 @@ class DubbingApp {
         this.saveUserPreferences();
     }
 
-    // Batch processing functionality
-    toggleBatchMode() {
-        const isVisible = this.batchPanel.style.display !== 'none';
-        this.batchPanel.style.display = isVisible ? 'none' : 'block';
-        this.batchArrow.classList.toggle('rotated', !isVisible);
-        
-        if (!isVisible) {
-            this.updateBatchSubmitVisibility();
-        }
-    }
-
-    updateBatchSubmitVisibility() {
-        const hasUrls = this.batchUrls.value.trim().length > 0;
-        this.batchSubmitBtn.style.display = hasUrls ? 'block' : 'none';
-        this.submitBtn.style.display = hasUrls ? 'none' : 'block';
-    }
-
-    addCurrentUrlToBatch() {
-        const currentUrl = this.urlInput.value.trim();
-        if (!currentUrl) {
-            this.showNotification('Please enter a URL first', 'warning');
-            return;
-        }
-        
-        if (!this.api.isValidYouTubeUrl(currentUrl)) {
-            this.showNotification('Please enter a valid YouTube URL first', 'warning');
-            return;
-        }
-        
-        const currentUrls = this.batchUrls.value.trim();
-        const newUrls = currentUrls ? `${currentUrls}\n${currentUrl}` : currentUrl;
-        this.batchUrls.value = newUrls;
-        this.updateBatchSubmitVisibility();
-        
-        this.showNotification('URL added to batch', 'success');
-    }
-
-    clearBatch() {
-        this.batchUrls.value = '';
-        this.updateBatchSubmitVisibility();
-        this.hideBatchProgress();
-    }
-
-    async handleBatchSubmit() {
-        const urlsText = this.batchUrls.value.trim();
-        if (!urlsText) {
-            this.showNotification('Please enter URLs for batch processing', 'warning');
-            return;
-        }
-        
-        const targetLanguage = this.languageSelect.value;
-        if (!targetLanguage) {
-            this.showNotification('Please select a target language', 'warning');
-            return;
-        }
-        
-        const urls = this.api.parseYouTubeUrls(urlsText);
-        if (urls.length === 0) {
-            this.showNotification('No valid YouTube URLs found', 'warning');
-            return;
-        }
-        
-        this.isBatchMode = true;
-        this.isProcessing = true;
-        this.setProcessingState(true);
-        
-        try {
-            this.showBatchProgress();
-            this.batchResults = [];
-            
-            const options = this.getUserSettings();
-            
-            this.batchResults = await this.api.submitBatch(
-                urls, 
-                targetLanguage, 
-                options,
-                (progress) => this.updateBatchProgress(progress)
-            );
-            
-            this.showBatchResults();
-            
-        } catch (error) {
-            console.error('Batch processing failed:', error);
-            this.showError(error);
-        } finally {
-            this.isProcessing = false;
-            this.isBatchMode = false;
-            this.setProcessingState(false);
-        }
-    }
-
-    showBatchProgress() {
-        this.batchProgress.style.display = 'block';
-        this.batchCurrentIndex.textContent = '0';
-        this.batchTotal.textContent = '0';
-        this.batchProgressFill.style.width = '0%';
-    }
-
-    updateBatchProgress(progress) {
-        this.batchCurrentIndex.textContent = progress.current;
-        this.batchTotal.textContent = progress.total;
-        
-        const percentage = (progress.current / progress.total) * 100;
-        this.batchProgressFill.style.width = `${percentage}%`;
-    }
-
-    hideBatchProgress() {
-        this.batchProgress.style.display = 'none';
-    }
-
-    showBatchResults() {
-        // Simple results display - could be enhanced
-        const successful = this.batchResults.filter(r => r.success).length;
-        const total = this.batchResults.length;
-        
-        this.showNotification(`Batch complete: ${successful}/${total} videos processed successfully`, 'info');
-        this.hideBatchProgress();
-    }
 
     // Before/After comparison functionality
     switchToPreviewView() {
@@ -1008,14 +870,9 @@ class DubbingApp {
         this.currentSessionId = null;
         this.currentYouTubeUrl = null;
         this.isProcessing = false;
-        this.isBatchMode = false;
         
         // Reset drag-and-drop zone
         this.clearUrlValue();
-        
-        // Reset batch processing
-        this.clearBatch();
-        this.hideBatchProgress();
         
         // Reset progress steps
         Object.values(this.progressSteps).forEach(step => {

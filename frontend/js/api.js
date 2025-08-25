@@ -41,34 +41,6 @@ class DubbingAPI {
         }, 'video submission');
     }
 
-    /**
-     * Submit multiple videos for batch processing
-     * @param {Array<string>} youtubeUrls - Array of YouTube URLs
-     * @param {string} targetLanguage - Target language for all videos
-     * @param {Object} options - Additional options
-     * @param {Function} onProgress - Progress callback
-     * @returns {Promise<Array>} Array of results
-     */
-    async submitBatch(youtubeUrls, targetLanguage, options = {}, onProgress = null) {
-        const results = [];
-        const total = youtubeUrls.length;
-        
-        for (let i = 0; i < youtubeUrls.length; i++) {
-            const url = youtubeUrls[i];
-            if (onProgress) {
-                onProgress({ current: i + 1, total, currentUrl: url });
-            }
-            
-            try {
-                const result = await this.submitVideo(url, targetLanguage, options);
-                results.push({ url, success: true, result });
-            } catch (error) {
-                results.push({ url, success: false, error: error.message });
-            }
-        }
-        
-        return results;
-    }
 
     /**
      * Check the status of a dubbing job
@@ -310,36 +282,4 @@ class DubbingAPI {
         return url.trim();
     }
 
-    /**
-     * Validate and parse multiple YouTube URLs
-     * @param {string} urlsText - Text containing URLs (one per line)
-     * @returns {Array<string>} Array of valid YouTube URLs
-     */
-    parseYouTubeUrls(urlsText) {
-        const lines = urlsText.split('\n')
-            .map(line => line.trim())
-            .filter(line => line.length > 0);
-        
-        const validUrls = [];
-        const invalidUrls = [];
-        
-        for (const line of lines) {
-            try {
-                const normalizedUrl = this.normalizeYouTubeUrl(line);
-                if (this.isValidYouTubeUrl(normalizedUrl)) {
-                    validUrls.push(normalizedUrl);
-                } else {
-                    invalidUrls.push(line);
-                }
-            } catch (error) {
-                invalidUrls.push(line);
-            }
-        }
-        
-        if (invalidUrls.length > 0) {
-            console.warn('Invalid URLs found:', invalidUrls);
-        }
-        
-        return validUrls;
-    }
 }
