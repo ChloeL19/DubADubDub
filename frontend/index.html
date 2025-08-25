@@ -17,13 +17,22 @@
             <form id="dubbingForm" class="dubbing-form">
                 <div class="input-group">
                     <label for="youtubeUrl">YouTube URL:</label>
-                    <input 
-                        type="url" 
-                        id="youtubeUrl" 
-                        name="youtubeUrl" 
-                        placeholder="https://www.youtube.com/watch?v=..." 
-                        required
-                    >
+                    <div class="url-input-container">
+                        <div id="dropZone" class="drop-zone">
+                            <div class="drop-zone-content">
+                                <span class="drop-zone-icon">🎬</span>
+                                <span class="drop-zone-text">Drop YouTube URL here or click to paste</span>
+                                <span class="drop-zone-subtext">Supports YouTube links, video IDs, and share URLs</span>
+                            </div>
+                        </div>
+                        <input 
+                            type="url" 
+                            id="youtubeUrl" 
+                            name="youtubeUrl" 
+                            placeholder="https://www.youtube.com/watch?v=..." 
+                            required
+                        >
+                    </div>
                 </div>
 
                 <div class="input-group">
@@ -45,9 +54,100 @@
                     </select>
                 </div>
 
-                <button type="submit" id="submitBtn" class="submit-btn">
-                    Start Dubbing
-                </button>
+                <!-- Advanced Settings Panel -->
+                <div class="advanced-settings">
+                    <button type="button" id="toggleSettings" class="toggle-settings-btn">
+                        ⚙️ Advanced Settings <span class="toggle-arrow">▼</span>
+                    </button>
+                    <div id="settingsPanel" class="settings-panel" style="display: none;">
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <label for="videoQuality">Video Quality:</label>
+                                <select id="videoQuality" name="videoQuality">
+                                    <option value="best">Best Available</option>
+                                    <option value="1080p">1080p</option>
+                                    <option value="720p">720p</option>
+                                    <option value="480p">480p</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label for="audioQuality">Audio Quality:</label>
+                                <select id="audioQuality" name="audioQuality">
+                                    <option value="high">High (192 kbps)</option>
+                                    <option value="medium">Medium (128 kbps)</option>
+                                    <option value="low">Low (96 kbps)</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label for="exportFormat">Export Format:</label>
+                                <select id="exportFormat" name="exportFormat">
+                                    <option value="mp4">MP4 (Recommended)</option>
+                                    <option value="webm">WebM</option>
+                                    <option value="avi">AVI</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="preserveOriginal" name="preserveOriginal" checked>
+                                    <span class="checkmark"></span>
+                                    Preserve original background audio
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="autoRetry" name="autoRetry" checked>
+                                    <span class="checkmark"></span>
+                                    Auto-retry on failure
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Batch Processing Section -->
+                <div class="batch-processing">
+                    <button type="button" id="toggleBatch" class="toggle-batch-btn">
+                        📋 Batch Processing <span class="toggle-arrow">▼</span>
+                    </button>
+                    <div id="batchPanel" class="batch-panel" style="display: none;">
+                        <div class="batch-input">
+                            <label for="batchUrls">Multiple URLs (one per line):</label>
+                            <textarea 
+                                id="batchUrls" 
+                                name="batchUrls" 
+                                placeholder="https://www.youtube.com/watch?v=video1&#10;https://www.youtube.com/watch?v=video2&#10;https://youtu.be/video3"
+                                rows="4"
+                            ></textarea>
+                            <div class="batch-actions">
+                                <button type="button" id="addCurrentUrl" class="add-current-btn">
+                                    Add Current URL
+                                </button>
+                                <button type="button" id="clearBatch" class="clear-batch-btn">
+                                    Clear All
+                                </button>
+                            </div>
+                        </div>
+                        <div class="batch-status">
+                            <div id="batchProgress" class="batch-progress" style="display: none;">
+                                <div class="batch-progress-text">Processing batch: <span id="batchCurrentIndex">0</span> of <span id="batchTotal">0</span></div>
+                                <div class="batch-progress-bar">
+                                    <div id="batchProgressFill" class="batch-progress-fill"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="submit-section">
+                    <button type="submit" id="submitBtn" class="submit-btn">
+                        <span id="submitText">Start Dubbing</span>
+                        <span id="submitIcon">🎬</span>
+                    </button>
+                    <button type="button" id="batchSubmitBtn" class="batch-submit-btn" style="display: none;">
+                        <span id="batchSubmitText">Start Batch Processing</span>
+                        <span id="batchSubmitIcon">📋</span>
+                    </button>
+                </div>
             </form>
 
             <div id="statusSection" class="status-section" style="display: none;">
@@ -109,14 +209,66 @@
                 <h3>Dubbing Complete!</h3>
                 <div id="resultMessage" class="result-message"></div>
                 
-                <div class="video-preview-container">
-                    <h4>Preview Your Dubbed Video</h4>
-                    <video id="dubbedVideoPreview" controls class="dubbed-video-preview" style="display: none;">
-                        <source id="videoSource" src="" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                    <div id="videoLoadingMessage" class="video-loading-message" style="display: none;">
-                        Loading video preview...
+                <!-- Before/After Comparison View -->
+                <div class="comparison-view">
+                    <div class="comparison-tabs">
+                        <button id="previewTab" class="comparison-tab active">
+                            🎬 Dubbed Preview
+                        </button>
+                        <button id="comparisonTab" class="comparison-tab">
+                            🔄 Before / After
+                        </button>
+                    </div>
+                    
+                    <div class="comparison-content">
+                        <!-- Single Video Preview (Default) -->
+                        <div id="singlePreview" class="single-preview">
+                            <div class="video-preview-container">
+                                <h4>Preview Your Dubbed Video</h4>
+                                <video id="dubbedVideoPreview" controls class="dubbed-video-preview" style="display: none;">
+                                    <source id="videoSource" src="" type="video/mp4">
+                                    Your browser does not support the video tag.
+                                </video>
+                                <div id="videoLoadingMessage" class="video-loading-message" style="display: none;">
+                                    Loading video preview...
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Side-by-Side Comparison -->
+                        <div id="beforeAfterComparison" class="before-after-comparison" style="display: none;">
+                            <div class="comparison-videos">
+                                <div class="video-comparison-side">
+                                    <h4>Original Video</h4>
+                                    <div class="original-video-placeholder">
+                                        <div class="video-placeholder-content">
+                                            <span class="placeholder-icon">📹</span>
+                                            <span class="placeholder-text">Original YouTube video</span>
+                                            <a id="originalVideoLink" href="#" target="_blank" class="original-video-link">
+                                                View on YouTube
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="video-comparison-side">
+                                    <h4>Dubbed Video</h4>
+                                    <video id="dubbedVideoComparison" controls class="dubbed-video-preview">
+                                        <source id="videoSourceComparison" src="" type="video/mp4">
+                                        Your browser does not support the video tag.
+                                    </video>
+                                </div>
+                            </div>
+                            
+                            <div class="comparison-controls">
+                                <button id="syncPlayback" class="sync-playback-btn">
+                                    🔄 Sync Playback
+                                </button>
+                                <button id="toggleMute" class="toggle-mute-btn">
+                                    🔊 Mute Original
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 

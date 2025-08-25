@@ -5,9 +5,13 @@ class DubbingApp {
         this.api = new DubbingAPI();
         this.currentSessionId = null;
         this.isProcessing = false;
+        this.isBatchMode = false;
+        this.currentYouTubeUrl = null;
+        this.batchResults = [];
         
         this.initializeElements();
         this.bindEvents();
+        this.loadUserPreferences();
     }
 
     initializeElements() {
@@ -16,6 +20,32 @@ class DubbingApp {
         this.urlInput = document.getElementById('youtubeUrl');
         this.languageSelect = document.getElementById('targetLanguage');
         this.submitBtn = document.getElementById('submitBtn');
+
+        // Drag-and-drop elements
+        this.dropZone = document.getElementById('dropZone');
+
+        // Advanced settings elements
+        this.toggleSettingsBtn = document.getElementById('toggleSettings');
+        this.settingsPanel = document.getElementById('settingsPanel');
+        this.toggleArrow = this.toggleSettingsBtn.querySelector('.toggle-arrow');
+        this.videoQualitySelect = document.getElementById('videoQuality');
+        this.audioQualitySelect = document.getElementById('audioQuality');
+        this.exportFormatSelect = document.getElementById('exportFormat');
+        this.preserveOriginalCheckbox = document.getElementById('preserveOriginal');
+        this.autoRetryCheckbox = document.getElementById('autoRetry');
+
+        // Batch processing elements
+        this.toggleBatchBtn = document.getElementById('toggleBatch');
+        this.batchPanel = document.getElementById('batchPanel');
+        this.batchArrow = this.toggleBatchBtn.querySelector('.toggle-arrow');
+        this.batchUrls = document.getElementById('batchUrls');
+        this.addCurrentUrlBtn = document.getElementById('addCurrentUrl');
+        this.clearBatchBtn = document.getElementById('clearBatch');
+        this.batchSubmitBtn = document.getElementById('batchSubmitBtn');
+        this.batchProgress = document.getElementById('batchProgress');
+        this.batchCurrentIndex = document.getElementById('batchCurrentIndex');
+        this.batchTotal = document.getElementById('batchTotal');
+        this.batchProgressFill = document.getElementById('batchProgressFill');
 
         // Status elements
         this.statusSection = document.getElementById('statusSection');
@@ -52,6 +82,17 @@ class DubbingApp {
         this.videoLoadingMessage = document.getElementById('videoLoadingMessage');
         this.videoPreviewContainer = document.querySelector('.video-preview-container');
 
+        // Before/After comparison elements
+        this.previewTab = document.getElementById('previewTab');
+        this.comparisonTab = document.getElementById('comparisonTab');
+        this.singlePreview = document.getElementById('singlePreview');
+        this.beforeAfterComparison = document.getElementById('beforeAfterComparison');
+        this.originalVideoLink = document.getElementById('originalVideoLink');
+        this.dubbedVideoComparison = document.getElementById('dubbedVideoComparison');
+        this.videoSourceComparison = document.getElementById('videoSourceComparison');
+        this.syncPlaybackBtn = document.getElementById('syncPlayback');
+        this.toggleMuteBtn = document.getElementById('toggleMute');
+
         // Initialize fun facts
         this.funFacts = [
             "Did you know? Our AI can detect and translate over 100 languages automatically!",
@@ -76,6 +117,26 @@ class DubbingApp {
         
         // New dubbing button
         this.newDubbingBtn.addEventListener('click', () => this.resetForm());
+
+        // Drag-and-drop events
+        this.bindDragDropEvents();
+
+        // Advanced settings events
+        this.toggleSettingsBtn.addEventListener('click', () => this.toggleSettings());
+        this.autoRetryCheckbox.addEventListener('change', () => this.updateAutoRetryPreference());
+
+        // Batch processing events
+        this.toggleBatchBtn.addEventListener('click', () => this.toggleBatchMode());
+        this.batchUrls.addEventListener('input', () => this.updateBatchSubmitVisibility());
+        this.addCurrentUrlBtn.addEventListener('click', () => this.addCurrentUrlToBatch());
+        this.clearBatchBtn.addEventListener('click', () => this.clearBatch());
+        this.batchSubmitBtn.addEventListener('click', () => this.handleBatchSubmit());
+
+        // Comparison view events
+        this.previewTab.addEventListener('click', () => this.switchToPreviewView());
+        this.comparisonTab.addEventListener('click', () => this.switchToComparisonView());
+        this.syncPlaybackBtn.addEventListener('click', () => this.syncVideoPlayback());
+        this.toggleMuteBtn.addEventListener('click', () => this.toggleOriginalMute());
         
         // Video preview controls
         this.playVideoBtn.addEventListener('click', () => this.toggleVideoPlayback());
@@ -89,6 +150,9 @@ class DubbingApp {
         // URL input validation
         this.urlInput.addEventListener('blur', () => this.validateUrl());
         this.urlInput.addEventListener('input', () => this.clearUrlError());
+
+        // Settings change handlers
+        this.bindSettingsChangeEvents();
     }
 
     async handleSubmit(event) {
@@ -186,12 +250,16 @@ class DubbingApp {
     async startDubbing(youtubeUrl, targetLanguage) {
         this.isProcessing = true;
         this.setProcessingState(true);
+        this.currentYouTubeUrl = youtubeUrl;
         
         try {
+            // Get user settings
+            const options = this.getUserSettings();
+            
             // Submit video for processing
             this.updateStatus('Submitting video for processing...', 10);
             
-            const response = await this.api.submitVideo(youtubeUrl, targetLanguage);
+            const response = await this.api.submitVideo(youtubeUrl, targetLanguage, options);
             this.currentSessionId = response.session_id;
             
             // Start polling for status
@@ -569,6 +637,400 @@ class DubbingApp {
     showNotification(message, type = 'info') {
         // Simple notification - can be enhanced with a proper notification system
         console.log(`${type.toUpperCase()}: ${message}`);
+    }
+
+    // === NEW PR#5 METHODS ===
+
+    // Drag-and-drop functionality
+    bindDragDropEvents() {
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            this.dropZone.addEventListener(eventName, this.preventDefaults, false);
+            document.body.addEventListener(eventName, this.preventDefaults, false);
+        });
+
+        // Highlight drop zone when item is dragged over it
+        ['dragenter', 'dragover'].forEach(eventName => {
+            this.dropZone.addEventListener(eventName, () => this.highlight(), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            this.dropZone.addEventListener(eventName, () => this.unhighlight(), false);
+        });
+
+        // Handle dropped files/text
+        this.dropZone.addEventListener('drop', (e) => this.handleDrop(e), false);
+        
+        // Handle click to paste
+        this.dropZone.addEventListener('click', () => this.handleDropZoneClick());
+    }
+
+    preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    highlight() {
+        this.dropZone.classList.add('drag-over');
+    }
+
+    unhighlight() {
+        this.dropZone.classList.remove('drag-over');
+    }
+
+    async handleDrop(e) {
+        const dt = e.dataTransfer;
+        
+        // Handle text data (URLs)
+        if (dt.types.includes('text/plain')) {
+            const text = dt.getData('text/plain').trim();
+            if (this.api.isValidYouTubeUrl(text)) {
+                this.setUrlValue(text);
+                return;
+            }
+        }
+        
+        // Handle files (not implemented for now, but ready for future)
+        if (dt.files.length > 0) {
+            this.showNotification('File uploads are not yet supported. Please paste a YouTube URL instead.', 'info');
+        }
+    }
+
+    async handleDropZoneClick() {
+        try {
+            // Try to read clipboard
+            if (navigator.clipboard && navigator.clipboard.readText) {
+                const clipboardText = await navigator.clipboard.readText();
+                if (this.api.isValidYouTubeUrl(clipboardText.trim())) {
+                    this.setUrlValue(clipboardText.trim());
+                } else {
+                    this.showNotification('No valid YouTube URL found in clipboard', 'info');
+                }
+            } else {
+                // Fallback: focus on input field
+                this.urlInput.focus();
+                this.urlInput.select();
+            }
+        } catch (error) {
+            // User denied clipboard access or other error
+            this.urlInput.focus();
+            this.urlInput.select();
+        }
+    }
+
+    setUrlValue(url) {
+        this.urlInput.value = url;
+        this.dropZone.classList.add('has-url');
+        this.dropZone.querySelector('.drop-zone-text').textContent = 'URL set! Ready to dub.';
+        this.dropZone.querySelector('.drop-zone-subtext').textContent = 'Click to change URL';
+        
+        // Validate the URL
+        this.validateUrl();
+    }
+
+    clearUrlValue() {
+        this.urlInput.value = '';
+        this.dropZone.classList.remove('has-url');
+        this.dropZone.querySelector('.drop-zone-text').textContent = 'Drop YouTube URL here or click to paste';
+        this.dropZone.querySelector('.drop-zone-subtext').textContent = 'Supports YouTube links, video IDs, and share URLs';
+    }
+
+    // Advanced settings functionality
+    toggleSettings() {
+        const isVisible = this.settingsPanel.style.display !== 'none';
+        this.settingsPanel.style.display = isVisible ? 'none' : 'block';
+        this.toggleArrow.classList.toggle('rotated', !isVisible);
+    }
+
+    bindSettingsChangeEvents() {
+        // Save settings when changed
+        [this.videoQualitySelect, this.audioQualitySelect, this.exportFormatSelect, 
+         this.preserveOriginalCheckbox, this.autoRetryCheckbox].forEach(element => {
+            element.addEventListener('change', () => this.saveUserPreferences());
+        });
+    }
+
+    getUserSettings() {
+        return {
+            video_quality: this.videoQualitySelect.value,
+            audio_quality: this.audioQualitySelect.value,
+            export_format: this.exportFormatSelect.value,
+            preserve_original: this.preserveOriginalCheckbox.checked,
+            auto_retry: this.autoRetryCheckbox.checked
+        };
+    }
+
+    updateAutoRetryPreference() {
+        this.api.setAutoRetry(this.autoRetryCheckbox.checked);
+        this.saveUserPreferences();
+    }
+
+    // Batch processing functionality
+    toggleBatchMode() {
+        const isVisible = this.batchPanel.style.display !== 'none';
+        this.batchPanel.style.display = isVisible ? 'none' : 'block';
+        this.batchArrow.classList.toggle('rotated', !isVisible);
+        
+        if (!isVisible) {
+            this.updateBatchSubmitVisibility();
+        }
+    }
+
+    updateBatchSubmitVisibility() {
+        const hasUrls = this.batchUrls.value.trim().length > 0;
+        this.batchSubmitBtn.style.display = hasUrls ? 'block' : 'none';
+        this.submitBtn.style.display = hasUrls ? 'none' : 'block';
+    }
+
+    addCurrentUrlToBatch() {
+        const currentUrl = this.urlInput.value.trim();
+        if (!currentUrl) {
+            this.showNotification('Please enter a URL first', 'warning');
+            return;
+        }
+        
+        if (!this.api.isValidYouTubeUrl(currentUrl)) {
+            this.showNotification('Please enter a valid YouTube URL first', 'warning');
+            return;
+        }
+        
+        const currentUrls = this.batchUrls.value.trim();
+        const newUrls = currentUrls ? `${currentUrls}\n${currentUrl}` : currentUrl;
+        this.batchUrls.value = newUrls;
+        this.updateBatchSubmitVisibility();
+        
+        this.showNotification('URL added to batch', 'success');
+    }
+
+    clearBatch() {
+        this.batchUrls.value = '';
+        this.updateBatchSubmitVisibility();
+        this.hideBatchProgress();
+    }
+
+    async handleBatchSubmit() {
+        const urlsText = this.batchUrls.value.trim();
+        if (!urlsText) {
+            this.showNotification('Please enter URLs for batch processing', 'warning');
+            return;
+        }
+        
+        const targetLanguage = this.languageSelect.value;
+        if (!targetLanguage) {
+            this.showNotification('Please select a target language', 'warning');
+            return;
+        }
+        
+        const urls = this.api.parseYouTubeUrls(urlsText);
+        if (urls.length === 0) {
+            this.showNotification('No valid YouTube URLs found', 'warning');
+            return;
+        }
+        
+        this.isBatchMode = true;
+        this.isProcessing = true;
+        this.setProcessingState(true);
+        
+        try {
+            this.showBatchProgress();
+            this.batchResults = [];
+            
+            const options = this.getUserSettings();
+            
+            this.batchResults = await this.api.submitBatch(
+                urls, 
+                targetLanguage, 
+                options,
+                (progress) => this.updateBatchProgress(progress)
+            );
+            
+            this.showBatchResults();
+            
+        } catch (error) {
+            console.error('Batch processing failed:', error);
+            this.showError(error);
+        } finally {
+            this.isProcessing = false;
+            this.isBatchMode = false;
+            this.setProcessingState(false);
+        }
+    }
+
+    showBatchProgress() {
+        this.batchProgress.style.display = 'block';
+        this.batchCurrentIndex.textContent = '0';
+        this.batchTotal.textContent = '0';
+        this.batchProgressFill.style.width = '0%';
+    }
+
+    updateBatchProgress(progress) {
+        this.batchCurrentIndex.textContent = progress.current;
+        this.batchTotal.textContent = progress.total;
+        
+        const percentage = (progress.current / progress.total) * 100;
+        this.batchProgressFill.style.width = `${percentage}%`;
+    }
+
+    hideBatchProgress() {
+        this.batchProgress.style.display = 'none';
+    }
+
+    showBatchResults() {
+        // Simple results display - could be enhanced
+        const successful = this.batchResults.filter(r => r.success).length;
+        const total = this.batchResults.length;
+        
+        this.showNotification(`Batch complete: ${successful}/${total} videos processed successfully`, 'info');
+        this.hideBatchProgress();
+    }
+
+    // Before/After comparison functionality
+    switchToPreviewView() {
+        this.previewTab.classList.add('active');
+        this.comparisonTab.classList.remove('active');
+        this.singlePreview.style.display = 'block';
+        this.beforeAfterComparison.style.display = 'none';
+    }
+
+    switchToComparisonView() {
+        this.previewTab.classList.remove('active');
+        this.comparisonTab.classList.add('active');
+        this.singlePreview.style.display = 'none';
+        this.beforeAfterComparison.style.display = 'block';
+        
+        // Set up comparison view
+        this.setupComparisonView();
+    }
+
+    setupComparisonView() {
+        if (this.currentYouTubeUrl) {
+            this.originalVideoLink.href = this.currentYouTubeUrl;
+        }
+        
+        // Copy dubbed video to comparison side
+        if (this.videoSource.src) {
+            this.videoSourceComparison.src = this.videoSource.src;
+            this.dubbedVideoComparison.load();
+        }
+    }
+
+    syncVideoPlayback() {
+        // Sync playback between original and dubbed (if both are available)
+        if (this.dubbedVideoComparison && !this.dubbedVideoComparison.paused) {
+            const currentTime = this.dubbedVideoComparison.currentTime;
+            // Could sync with original video if we had it loaded
+            console.log('Sync playback at time:', currentTime);
+        }
+    }
+
+    toggleOriginalMute() {
+        // This would control original video muting if we had it
+        const isMuted = this.toggleMuteBtn.textContent.includes('Unmute');
+        this.toggleMuteBtn.textContent = isMuted ? '🔊 Mute Original' : '🔇 Unmute Original';
+    }
+
+    // User preferences
+    loadUserPreferences() {
+        const prefs = localStorage.getItem('dubadubdub-preferences');
+        if (prefs) {
+            try {
+                const preferences = JSON.parse(prefs);
+                
+                if (preferences.videoQuality) this.videoQualitySelect.value = preferences.videoQuality;
+                if (preferences.audioQuality) this.audioQualitySelect.value = preferences.audioQuality;
+                if (preferences.exportFormat) this.exportFormatSelect.value = preferences.exportFormat;
+                if (preferences.preserveOriginal !== undefined) this.preserveOriginalCheckbox.checked = preferences.preserveOriginal;
+                if (preferences.autoRetry !== undefined) {
+                    this.autoRetryCheckbox.checked = preferences.autoRetry;
+                    this.api.setAutoRetry(preferences.autoRetry);
+                }
+            } catch (error) {
+                console.warn('Could not load user preferences:', error);
+            }
+        }
+    }
+
+    saveUserPreferences() {
+        const preferences = {
+            videoQuality: this.videoQualitySelect.value,
+            audioQuality: this.audioQualitySelect.value,
+            exportFormat: this.exportFormatSelect.value,
+            preserveOriginal: this.preserveOriginalCheckbox.checked,
+            autoRetry: this.autoRetryCheckbox.checked
+        };
+        
+        localStorage.setItem('dubadubdub-preferences', JSON.stringify(preferences));
+    }
+
+    // Enhanced showSuccess to support comparison view
+    async showSuccess(status) {
+        try {
+            // Get download URL
+            const downloadUrl = await this.api.getDownloadUrl(this.currentSessionId);
+            
+            // Show success section
+            this.hideAllSections();
+            this.resultSection.style.display = 'block';
+            
+            const duration = status.duration ? ` (${Math.round(status.duration)}s)` : '';
+            this.resultMessage.innerHTML = `
+                <strong>Success!</strong> Your video has been dubbed successfully${duration}.<br>
+                <strong>Original Language:</strong> ${status.source_language || 'Auto-detected'}<br>
+                <strong>Target Language:</strong> ${status.target_language}
+            `;
+            
+            // Set up download link
+            this.downloadLink.href = downloadUrl;
+            this.downloadLink.download = `dubbed_video_${this.currentSessionId}.mp4`;
+            
+            // Set up video preview
+            await this.setupVideoPreview(downloadUrl);
+            
+            // Initialize comparison view
+            this.switchToPreviewView(); // Default to preview view
+            
+        } catch (error) {
+            console.error('Error setting up download:', error);
+            this.showError(new Error('Video processed successfully, but download setup failed. Please try again.'));
+        }
+    }
+
+    // Override resetForm to handle new elements
+    resetForm() {
+        // Stop any ongoing processes
+        this.stopFunFactRotation();
+        
+        // Reset video preview
+        this.resetVideoPreview();
+        
+        // Reset form
+        this.form.reset();
+        this.currentSessionId = null;
+        this.currentYouTubeUrl = null;
+        this.isProcessing = false;
+        this.isBatchMode = false;
+        
+        // Reset drag-and-drop zone
+        this.clearUrlValue();
+        
+        // Reset batch processing
+        this.clearBatch();
+        this.hideBatchProgress();
+        
+        // Reset progress steps
+        Object.values(this.progressSteps).forEach(step => {
+            step.classList.remove('active', 'completed');
+        });
+        
+        // Hide all sections and show form
+        this.hideAllSections();
+        this.form.style.display = 'block';
+        
+        // Clear any field errors
+        this.clearErrors();
+        
+        // Reset button state
+        this.setProcessingState(false);
     }
 }
 
