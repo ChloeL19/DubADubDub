@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DubADubDub - Video Dubbing Tool</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>DubADubDub</h1>
+            <p>Automatically dub YouTube videos into different languages</p>
+        </header>
+
+        <main>
+            <form id="dubbingForm" class="dubbing-form">
+                <div class="input-group">
+                    <label for="youtubeUrl">YouTube URL:</label>
+                    <input 
+                        type="url" 
+                        id="youtubeUrl" 
+                        name="youtubeUrl" 
+                        placeholder="https://www.youtube.com/watch?v=..." 
+                        required
+                    >
+                </div>
+
+                <div class="input-group">
+                    <label for="targetLanguage">Target Language:</label>
+                    <select id="targetLanguage" name="targetLanguage" required>
+                        <option value="">Select a language</option>
+                        <option value="spanish">Spanish</option>
+                        <option value="french">French</option>
+                        <option value="german">German</option>
+                        <option value="italian">Italian</option>
+                        <option value="portuguese">Portuguese</option>
+                        <option value="chinese">Chinese (Mandarin)</option>
+                        <option value="japanese">Japanese</option>
+                        <option value="korean">Korean</option>
+                        <option value="arabic">Arabic</option>
+                        <option value="russian">Russian</option>
+                        <option value="hindi">Hindi</option>
+                        <option value="dutch">Dutch</option>
+                    </select>
+                </div>
+
+                <button type="submit" id="submitBtn" class="submit-btn">
+                    Start Dubbing
+                </button>
+            </form>
+
+            <div id="statusSection" class="status-section" style="display: none;">
+                <div class="status-header">
+                    <h3>
+                        <span class="loading"></span>
+                        Processing Your Video
+                    </h3>
+                    <div id="statusMessage" class="status-message"></div>
+                </div>
+                
+                <div class="status-progress">
+                    <div class="progress-steps">
+                        <div class="progress-step" id="step-download">
+                            <div class="progress-step-circle">1</div>
+                            <div class="progress-step-label">Download</div>
+                        </div>
+                        <div class="progress-step" id="step-transcribe">
+                            <div class="progress-step-circle">2</div>
+                            <div class="progress-step-label">Transcribe</div>
+                        </div>
+                        <div class="progress-step" id="step-translate">
+                            <div class="progress-step-circle">3</div>
+                            <div class="progress-step-label">Translate</div>
+                        </div>
+                        <div class="progress-step" id="step-synthesize">
+                            <div class="progress-step-circle">4</div>
+                            <div class="progress-step-label">Synthesize</div>
+                        </div>
+                        <div class="progress-step" id="step-overlay">
+                            <div class="progress-step-circle">5</div>
+                            <div class="progress-step-label">Overlay</div>
+                        </div>
+                    </div>
+                    
+                    <div id="progressBar" class="progress-bar">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                </div>
+                
+                <div class="status-footer">
+                    <div id="estimatedTime" class="estimated-time">
+                        Estimated time: ~2-3 minutes
+                    </div>
+                    
+                    <div id="funFact" class="fun-fact">
+                        <span class="fun-fact-text">Did you know? Our AI can detect and translate over 100 languages automatically!</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="errorSection" class="error-section" style="display: none;">
+                <h3>Error</h3>
+                <div id="errorMessage" class="error-message"></div>
+                <button id="retryBtn" class="retry-btn">Try Again</button>
+            </div>
+
+            <div id="resultSection" class="result-section" style="display: none;">
+                <h3>Dubbing Complete!</h3>
+                <div id="resultMessage" class="result-message"></div>
+                
+                <div class="video-preview-container">
+                    <h4>Preview Your Dubbed Video</h4>
+                    <video id="dubbedVideoPreview" controls class="dubbed-video-preview" style="display: none;">
+                        <source id="videoSource" src="" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    <div id="videoLoadingMessage" class="video-loading-message" style="display: none;">
+                        Loading video preview...
+                    </div>
+                </div>
+                
+                <div class="result-actions">
+                    <button id="playVideoBtn" class="play-video-btn" style="display: none;">
+                        ▶️ Play Preview
+                    </button>
+                    <a id="downloadLink" href="#" class="download-btn" download>
+                        📥 Download Video
+                    </a>
+                    <button id="newDubbingBtn" class="new-dubbing-btn">
+                        🎬 Create New Dubbing
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Powered by ElevenLabs, Anthropic Claude, and yt-dlp</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
